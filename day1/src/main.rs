@@ -22,12 +22,11 @@ fn main() {
         }
 
         calorie_totals.sort();
-        let first = calorie_totals.last().unwrap();
+        let first = calorie_totals.pop().unwrap();
         println!("carrying the most {:?}",  first);
 
-        let len = calorie_totals.len();
-        let second = calorie_totals[len - 2];
-        let third: i32 = calorie_totals[len -3];
+        let second =calorie_totals.pop().unwrap();
+        let third: i32 = calorie_totals.pop().unwrap();
 
         let top_three_total = first + second + third;
 
