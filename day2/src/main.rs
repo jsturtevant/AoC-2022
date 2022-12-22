@@ -1,27 +1,46 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 
 fn main() {
     if let Ok(lines) = read_lines("./input.txt") {
-        
+        let mut game = RpsGame::new();
+
+        game.game_rules.insert(
+            Rps::Rock,
+            Rules {
+                loses_against: Rps::Paper,
+                wins_against: Rps::Scissors,
+            },
+        );
+        game.game_rules.insert(
+            Rps::Paper,
+            Rules {
+                loses_against: Rps::Scissors,
+                wins_against: Rps::Rock,
+            },
+        );
+        game.game_rules.insert(
+            Rps::Scissors,
+            Rules {
+                loses_against: Rps::Rock,
+                wins_against:  Rps::Paper,
+            },
+        );
+
         let mut score = 0;
         for line in lines {
             if let Ok(hands) = line {
                 let mut hand_itr = hands.split_whitespace();
-                let hand1 = hand_itr.next().unwrap();
-                let hint =hand_itr.next().unwrap();
 
-                let hand2 = choose(hand1, hint);
+                let hand1 = RpsGame::to_hand(hand_itr.next().unwrap().to_string());
+                let hint = RpsGame::to_strategy(hand_itr.next().unwrap().to_string());
 
-                score += play(hand1, hand2);
+                let hand2 = game.choose(hand1, hint);
 
-                match hand2 {
-                    ROCK => score += 1,
-                    PAPER => score += 2,
-                    SCISSOR => score += 3,
-                    _ => {}                
-                }
+                score += game.play(hand1, hand2);
+                score += RpsGame::additional_score(hand2)
             }
         }
 
@@ -29,173 +48,93 @@ fn main() {
     }
 }
 
-const ROCK: &str = "A";
-const PAPER: &str = "B";
-const SCISSOR: &str = "C";
-
-const RESPONSE_LOOSE: &str = "X";
-const RESPONSE_DRAW: &str = "Y";
-const RESPONSE_WIN: &str = "Z";
-
-fn choose<'a>(hand1: &'a str, hand2: &'a str) -> &'a str {
-    match hand1 {
-        ROCK => {   
-            match hand2 {
-                RESPONSE_LOOSE => SCISSOR,
-                RESPONSE_DRAW => ROCK,
-                RESPONSE_WIN => PAPER, 
-                _ => "",                
-            }
-        },
-        PAPER => {
-            match hand2 {
-                RESPONSE_LOOSE => ROCK,
-                RESPONSE_DRAW => PAPER,
-                RESPONSE_WIN => SCISSOR, 
-                _ => "",                
-            }
-        },
-        SCISSOR => {
-            match hand2 {
-                RESPONSE_LOOSE => PAPER,
-                RESPONSE_DRAW => SCISSOR,
-                RESPONSE_WIN => ROCK, 
-                _ => "", 
-            }
-        },
-        _ => "",
-    }
+#[derive(Eq, PartialEq, Hash, Clone, Copy)]
+enum Rps {
+    Rock,
+    Paper,
+    Scissors,
 }
 
-fn play(hand1: &str, hand2: &str) -> i32 {
-    match hand1 {
-        ROCK => {   
-            match hand2 {
-                PAPER =>  6,
-                ROCK =>  3,
-                _ => 0,                
-            }
-        },
-        PAPER => {
-            match hand2 {
-                SCISSOR =>  6,
-                PAPER => 3,
-                _ => 0,                
-            }
-        },
-        SCISSOR => {
-            match hand2 {
-                ROCK =>  6,
-                SCISSOR =>  3,
-                _ => 0, 
-            }
-        },
-        _ => 0,
+#[derive(Eq, PartialEq, Hash)]
+enum Strategy {
+    Win,
+    Lose,
+    Draw
+}
+#[derive(Clone, Copy)]
+struct Rules {
+    wins_against: Rps,
+    loses_against: Rps,
+}
+
+struct RpsGame {
+    game_rules:  HashMap<Rps, Rules>,
+}
+
+impl RpsGame {
+    fn new() -> RpsGame {
+        RpsGame {
+            game_rules: HashMap::new(),
+        }
+    }
+    fn choose(&self, hand1: Rps, hint: Strategy) -> Rps {
+        let rule = self.game_rules[&hand1];
+
+        match hint {
+            Strategy::Lose => rule.wins_against,
+            Strategy::Win => rule.loses_against,
+            Strategy::Draw  => hand1,
+        }
+    }
+
+    fn play(&self, hand1: Rps, hand2: Rps) -> i32 {
+        let rule = self.game_rules[&hand2];
+
+        if hand1 == hand2 {
+            return 3
+        }
+
+        if rule.loses_against == hand1 {
+                return 0
+        }else if rule.wins_against == hand1 {
+            return 6
+        }
+
+       panic!("don't know how to play hand")
+    }
+
+    fn additional_score(hand2: Rps) -> i32{
+        match hand2 {
+            Rps::Rock => 1,
+            Rps::Paper => 2,
+            Rps::Scissors => 3,
+        }
+    }
+
+    fn to_strategy(s: String) -> Strategy{
+        match s.as_str() {
+            "X" => Strategy::Lose,
+            "Y" => Strategy::Draw,
+            "Z" => Strategy::Win,
+            _ => panic!("unknown Strategy")
+        }
+    }
+
+    fn to_hand(s: String) -> Rps{
+        match s.as_str() {
+            "A" => Rps::Rock,
+            "B" => Rps::Paper,
+            "C" => Rps::Scissors,
+            _ => panic!("unknown hand")
+        }
     }
 }
 
 // https://doc.rust-lang.org/stable/rust-by-example/std_misc/arg/matching.html
 fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-where P: AsRef<Path>, {
+where
+    P: AsRef<Path>,
+{
     let file = File::open(filename)?;
     Ok(io::BufReader::new(file).lines())
-}
-
-#[cfg(test)]
-mod tests {
-    // Note this useful idiom: importing names from outer (for mod tests) scope.
-    use super::*;
-
-    use crate::{ROCK, RESPONSE_DRAW};
-
-    #[test]
-    fn choose_should_draw_rock() {
-       let h1 = ROCK;
-       let hint = RESPONSE_DRAW;
-
-       let h2 = choose(h1, hint);
-
-       assert_eq!(ROCK, h2)
-    }
-
-    #[test]
-    fn choose_should_win_rock() {
-       let h1 = ROCK;
-       let hint = RESPONSE_WIN;
-
-       let h2 = choose(h1, hint);
-
-       assert_eq!(PAPER, h2)
-    }
-
-    #[test]
-    fn choose_should_loose_rock() {
-       let h1 = ROCK;
-       let hint = RESPONSE_LOOSE;
-
-       let h2 = choose(h1, hint);
-
-       assert_eq!(SCISSOR, h2)
-    }
-
-    #[test]
-    fn choose_should_draw_paper() {
-        let h1 = PAPER;
-        let hint = RESPONSE_DRAW;
- 
-        let h2 = choose(h1, hint);
- 
-        assert_eq!(PAPER, h2)
-     }
- 
-     #[test]
-     fn choose_should_win_paper() {
-        let h1 = PAPER;
-        let hint = RESPONSE_WIN;
- 
-        let h2 = choose(h1, hint);
- 
-        assert_eq!(SCISSOR, h2)
-     }
- 
-     #[test]
-     fn choose_should_loose_paper() {
-        let h1 = PAPER;
-        let hint = RESPONSE_LOOSE;
- 
-        let h2 = choose(h1, hint);
- 
-        assert_eq!(ROCK, h2)
-     }
-
-     #[test]
-     fn choose_should_draw_scissors() {
-        let h1 = SCISSOR;
-        let hint = RESPONSE_DRAW;
- 
-        let h2 = choose(h1, hint);
- 
-        assert_eq!(SCISSOR, h2)
-     }
- 
-     #[test]
-     fn choose_should_win_scissors() {
-        let h1 = SCISSOR;
-        let hint = RESPONSE_WIN;
- 
-        let h2 = choose(h1, hint);
- 
-        assert_eq!(ROCK, h2)
-     }
- 
-     #[test]
-     fn choose_should_loose_scissors() {
-        let h1 = SCISSOR;
-        let hint = RESPONSE_LOOSE;
- 
-        let h2 = choose(h1, hint);
- 
-        assert_eq!(PAPER, h2)
-     }
-
 }
