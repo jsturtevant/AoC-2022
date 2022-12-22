@@ -2,7 +2,7 @@ use file_import;
 use std::collections::HashMap;
 
 fn main() {
-    let lines = match file_import::getlines("./input.txt") {
+    let lines = match file_import::getlines("./day2/input.txt") {
         Ok(lines) => lines,
         Err(_) => panic!("can't read file"),
     };

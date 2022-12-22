@@ -1,7 +1,7 @@
 use file_import;
 
 fn main() {
-    let lines = match file_import::getlines("./input.txt") {
+    let lines = match file_import::getlines("./day1/input.txt") {
         Ok(lines) => lines,
         Err(_) => panic!("can't read file"),
     };
