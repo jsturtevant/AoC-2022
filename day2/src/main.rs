@@ -1,50 +1,52 @@
-use std::collections::HashMap;
 use file_import;
+use std::collections::HashMap;
 
 fn main() {
-    if let Ok(lines) = file_import::getlines("./input.txt") {
-        
-        let mut game = RpsGame::new();
+    let lines = match file_import::getlines("./input.txt") {
+        Ok(lines) => lines,
+        Err(_) => panic!("can't read file"),
+    };
 
-        game.game_rules.insert(
-            Rps::Rock,
-            Rules {
-                loses_against: Rps::Paper,
-                wins_against: Rps::Scissors,
-            },
-        );
-        game.game_rules.insert(
-            Rps::Paper,
-            Rules {
-                loses_against: Rps::Scissors,
-                wins_against: Rps::Rock,
-            },
-        );
-        game.game_rules.insert(
-            Rps::Scissors,
-            Rules {
-                loses_against: Rps::Rock,
-                wins_against:  Rps::Paper,
-            },
-        );
+    let mut game = RpsGame::new();
 
-        let mut score = 0;
-        for line in lines {
-            if let Ok(hands) = line {
-                let mut hand_itr = hands.split_whitespace();
+    game.game_rules.insert(
+        Rps::Rock,
+        Rules {
+            loses_against: Rps::Paper,
+            wins_against: Rps::Scissors,
+        },
+    );
+    game.game_rules.insert(
+        Rps::Paper,
+        Rules {
+            loses_against: Rps::Scissors,
+            wins_against: Rps::Rock,
+        },
+    );
+    game.game_rules.insert(
+        Rps::Scissors,
+        Rules {
+            loses_against: Rps::Rock,
+            wins_against: Rps::Paper,
+        },
+    );
 
-                let hand1 = RpsGame::to_hand(hand_itr.next().unwrap().to_string());
-                let hint = RpsGame::to_strategy(hand_itr.next().unwrap().to_string());
+    let mut score = 0;
+    for line in lines {
+        if let Ok(hands) = line {
+            let mut hand_itr = hands.split_whitespace();
 
-                let hand2 = game.choose(hand1, hint);
+            let hand1 = RpsGame::to_hand(hand_itr.next().unwrap().to_string());
+            let hint = RpsGame::to_strategy(hand_itr.next().unwrap().to_string());
 
-                score += game.play(hand1, hand2);
-                score += RpsGame::additional_score(hand2)
-            }
+            let hand2 = game.choose(hand1, hint);
+
+            score += game.play(hand1, hand2);
+            score += RpsGame::additional_score(hand2)
         }
-
-        println!("Total: {}", score);
     }
+
+    println!("Total: {}", score);
 }
 
 #[derive(Eq, PartialEq, Hash, Clone, Copy)]
@@ -58,7 +60,7 @@ enum Rps {
 enum Strategy {
     Win,
     Lose,
-    Draw
+    Draw,
 }
 #[derive(Clone, Copy)]
 struct Rules {
@@ -67,7 +69,7 @@ struct Rules {
 }
 
 struct RpsGame {
-    game_rules:  HashMap<Rps, Rules>,
+    game_rules: HashMap<Rps, Rules>,
 }
 
 impl RpsGame {
@@ -82,7 +84,7 @@ impl RpsGame {
         match hint {
             Strategy::Lose => rule.wins_against,
             Strategy::Win => rule.loses_against,
-            Strategy::Draw  => hand1,
+            Strategy::Draw => hand1,
         }
     }
 
@@ -90,19 +92,19 @@ impl RpsGame {
         let rule = self.game_rules[&hand2];
 
         if hand1 == hand2 {
-            return 3
+            return 3;
         }
 
         if rule.loses_against == hand1 {
-                return 0
-        }else if rule.wins_against == hand1 {
-            return 6
+            return 0;
+        } else if rule.wins_against == hand1 {
+            return 6;
         }
 
-       panic!("don't know how to play hand")
+        panic!("don't know how to play hand")
     }
 
-    fn additional_score(hand2: Rps) -> i32{
+    fn additional_score(hand2: Rps) -> i32 {
         match hand2 {
             Rps::Rock => 1,
             Rps::Paper => 2,
@@ -110,22 +112,21 @@ impl RpsGame {
         }
     }
 
-    fn to_strategy(s: String) -> Strategy{
+    fn to_strategy(s: String) -> Strategy {
         match s.as_str() {
             "X" => Strategy::Lose,
             "Y" => Strategy::Draw,
             "Z" => Strategy::Win,
-            _ => panic!("unknown Strategy")
+            _ => panic!("unknown Strategy"),
         }
     }
 
-    fn to_hand(s: String) -> Rps{
+    fn to_hand(s: String) -> Rps {
         match s.as_str() {
             "A" => Rps::Rock,
             "B" => Rps::Paper,
             "C" => Rps::Scissors,
-            _ => panic!("unknown hand")
+            _ => panic!("unknown hand"),
         }
     }
 }
-
